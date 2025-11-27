@@ -1,0 +1,70 @@
+﻿@model GermanVerbTester.Models.VerbManagementViewModel
+
+@{
+    ViewData["Title"] = "Manage Verbs";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">Verb Data Management</h2>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @Model.StatusMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Section 1: Add Single Verb -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Add Single Verb</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AddSingleVerb" method="post">
+                        <div class="mb-3">
+                            <label asp-for="GermanVerb" class="form-label">German Verb (Infinitive)</label>
+                            <input asp-for="GermanVerb" class="form-control" placeholder="e.g., gehen" />
+                            <span asp-validation-for="GermanVerb" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="EnglishVerb" class="form-label">English Translation</label>
+                            <input asp-for="EnglishVerb" class="form-control" placeholder="e.g., to go" />
+                            <span asp-validation-for="EnglishVerb" class="text-danger"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Save Verb</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Bulk JSON Upload -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Bulk JSON Upload</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Upload a JSON file containing key-value pairs of German verbs and English translations.</p>
+                    <p class="text-muted small">Format must be: <code>{"kommen": "to come", "sehen": "to see"}</code></p>
+
+                    <form asp-action="UploadJsonVerbs" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label asp-for="JsonFile" class="form-label"></label>
+                            <input asp-for="JsonFile" type="file" class="form-control" accept=".json" required />
+                        </div>
+                        <button type="submit" class="btn btn-secondary w-100">Upload Verbs</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

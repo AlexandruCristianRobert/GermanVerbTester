@@ -1,0 +1,67 @@
+﻿@model GermanVerbTester.Models.TestViewModel
+
+<div class="container mt-4">
+    @if (Model.IsCompleted)
+    {
+        <div class="alert alert-info text-center">
+            <h3>You got @Model.Score / @Model.Questions.Count correct!</h3>
+            <a asp-action="Index" class="btn btn-primary btn-sm mt-2">Take Another Test</a>
+            <a asp-action="History" class="btn btn-secondary btn-sm mt-2">View History</a>
+        </div>
+    }
+    else
+    {
+        <h2>Translate the following:</h2>
+    }
+
+    <form asp-action="SubmitTest" method="post">
+        @for (int i = 0; i < Model.Questions.Count; i++)
+        {
+            // Hidden fields to ensure data persists on postback
+            <input type="hidden" asp-for="Questions[i].VerbId" />
+            <input type="hidden" asp-for="Questions[i].German" />
+            <input type="hidden" asp-for="Questions[i].CorrectEnglish" />
+
+            <div class="card mb-3">
+                <div class="card-body @(Model.IsCompleted ? (Model.Questions[i].IsCorrect ? "bg-success bg-opacity-25" : "bg-danger bg-opacity-25") : "")">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <h4 class="mb-0">@Model.Questions[i].German</h4>
+                        </div>
+                        <div class="col-md-5">
+                            @if (!Model.IsCompleted)
+                            {
+                                <input asp-for="Questions[i].UserAnswer" class="form-control" placeholder="English translation..." required />
+                            }
+                            else
+                            {
+                                <input asp-for="Questions[i].UserAnswer" class="form-control" disabled />
+                            }
+                        </div>
+
+                        @if (Model.IsCompleted)
+                        {
+                            <div class="col-md-4">
+                                @if (!Model.Questions[i].IsCorrect)
+                                {
+                                    <span class="fw-bold text-danger">Correct: @Model.Questions[i].CorrectEnglish</span>
+                                }
+                                else
+                                {
+                                    <span class="fw-bold text-success">Correct!</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (!Model.IsCompleted)
+        {
+            <div class="text-center mt-4 mb-5">
+                <button type="submit" class="btn btn-success btn-lg px-5">Submit Answers</button>
+            </div>
+        }
+    </form>
+</div>

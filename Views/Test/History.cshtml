@@ -1,0 +1,35 @@
+﻿@model IEnumerable<GermanVerbTester.Models.TestResult>
+
+@{
+    ViewData["Title"] = "Test History";
+}
+
+<div class="container mt-4">
+    <h2>Past Test Results</h2>
+    <a asp-action="Index" class="btn btn-outline-primary mb-3">Back to Home</a>
+
+    <table class="table table-striped table-hover table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Date / Time</th>
+                <th>Score</th>
+                <th>Percentage</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.SubmissionDate.ToString("g")</td>
+                    <td>@item.CorrectAnswers / @item.TotalQuestions</td>
+                    <td>
+                        @{
+                            double pct = (double)item.CorrectAnswers / item.TotalQuestions * 100;
+                        }
+                        @pct.ToString("0")%
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
