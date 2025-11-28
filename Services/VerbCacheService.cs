@@ -1,45 +1,61 @@
 ﻿using GermanVerbTester.Data;
 using GermanVerbTester.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GermanVerbTester.Services
 {
     public class VerbCacheService
     {
-        private readonly AppDbContext _context;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private List<Verb>? _cachedVerbs;
-        private readonly object _lock = new object();
+        private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
-        public VerbCacheService(AppDbContext context)
+        public VerbCacheService(IServiceScopeFactory serviceScopeFactory)
         {
-            _context = context;
+            _serviceScopeFactory = serviceScopeFactory;
         }
 
         public async Task<List<Verb>> GetAllVerbsAsync()
         {
-            if (_cachedVerbs == null)
+            if (_cachedVerbs != null)
             {
-                lock (_lock)
-                {
-                    if (_cachedVerbs == null)
-                    {
-                        _cachedVerbs = _context.Verbs.ToList();
-                    }
-                }
+                return _cachedVerbs;
             }
 
-            return await Task.FromResult(_cachedVerbs);
+            await _lock.WaitAsync();
+            try
+            {
+                if (_cachedVerbs == null)
+                {
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    _cachedVerbs = await context.Verbs.ToListAsync();
+                }
+
+                return _cachedVerbs;
+            }
+            finally
+            {
+                _lock.Release();
+            }
         }
 
         public async Task RefreshCacheAsync()
         {
-            var verbs = await _context.Verbs.ToListAsync();
-            lock (_lock)
+            await _lock.WaitAsync();
+            try
             {
-                _cachedVerbs = verbs;
+                using var scope = _serviceScopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                _cachedVerbs = await context.Verbs.ToListAsync();
+            }
+            finally
+            {
+                _lock.Release();
             }
         }
     }
