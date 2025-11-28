@@ -1,12 +1,16 @@
 using GermanVerbTester.Data;
+using GermanVerbTester.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<VerbCacheService>();
 
 var app = builder.Build();
 

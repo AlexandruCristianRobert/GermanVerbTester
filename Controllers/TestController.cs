@@ -1,5 +1,6 @@
 using GermanVerbTester.Data;
 using GermanVerbTester.Models;
+using GermanVerbTester.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -14,155 +15,75 @@ namespace GermanVerbTester.Controllers
     public class TestController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly VerbCacheService _verbCache;
 
-        public TestController(AppDbContext context)
+        public TestController(AppDbContext context, VerbCacheService verbCache)
         {
             _context = context;
+            _verbCache = verbCache;
         }
 
-        // 1. Homepage: Configuration
-        public IActionResult Index(int? numberOfVerbs = null, string? categories = null)
+        // SPA Homepage - serves the single page
+        public async Task<IActionResult> Index()
         {
-            var model = new TestConfigurationViewModel();
-
-            // If parameters are provided, restore the previous configuration
-            if (numberOfVerbs.HasValue)
-            {
-                model.NumberOfVerbs = numberOfVerbs.Value;
-            }
-
-            if (!string.IsNullOrEmpty(categories))
-            {
-                model.SelectedCategories = categories.Split(',').ToList();
-            }
-
-            return View(model);
+            // Load verbs into cache if not already loaded
+            var verbs = await _verbCache.GetAllVerbsAsync();
+            return View();
         }
 
-        // 2. Generate Test
-        [HttpPost]
-        public async Task<IActionResult> StartTest(TestConfigurationViewModel config)
+        // API: Get all verbs as JSON for client-side
+        [HttpGet]
+        public async Task<IActionResult> GetVerbs()
         {
-            if (!ModelState.IsValid)
-            {
-                return View("Index", config);
-            }
-
-            if (config.SelectedCategories == null || !config.SelectedCategories.Any())
-            {
-                ModelState.AddModelError("SelectedCategories", "Please select at least one category.");
-                return View("Index", config);
-            }
-
-            // Fetch random verbs filtered by selected categories
-            var verbs = await _context.Verbs
-                .Where(v => config.SelectedCategories.Contains(v.Category))
-                .OrderBy(r => Guid.NewGuid())
-                .Take(config.NumberOfVerbs)
-                .ToListAsync();
-
-            if (!verbs.Any())
-            {
-                ModelState.AddModelError("", "No verbs found for the selected categories. Please add verbs first.");
-                return View("Index", config);
-            }
-
-            if (verbs.Count < config.NumberOfVerbs)
-            {
-                ModelState.AddModelError("", $"Only {verbs.Count} verbs available for selected categories. Adjust your selection.");
-                return View("Index", config);
-            }
-
-            var viewModel = new TestViewModel
-            {
-                // Store the configuration for later use
-                NumberOfVerbs = config.NumberOfVerbs,
-                SelectedCategories = config.SelectedCategories
-            };
-
-            foreach (var v in verbs)
-            {
-                viewModel.Questions.Add(new QuestionItem
-                {
-                    VerbId = v.Id,
-                    German = v.German,
-                    CorrectEnglish = v.English,
-                    UserAnswer = ""
-                });
-            }
-
-            return View("TestExecution", viewModel);
+            var verbs = await _verbCache.GetAllVerbsAsync();
+            return Json(verbs);
         }
 
-        // 3. Process Results
-        [HttpPost]
-        public async Task<IActionResult> SubmitTest(TestViewModel model)
-        {
-            int score = 0;
-
-            // Grading logic
-            foreach (var q in model.Questions)
-            {
-                // Normalize strings for comparison (trim and lowercase)
-                var userAns = q.UserAnswer?.Trim().ToLower();
-                // Ensure we get the correct verb from the database for reliable comparison
-                var correctVerb = await _context.Verbs.FindAsync(q.VerbId);
-                var correctAns = correctVerb?.English?.Trim().ToLower();
-
-                if (userAns == correctAns)
-                {
-                    q.IsCorrect = true;
-                    score++;
-                }
-                else
-                {
-                    q.IsCorrect = false;
-                }
-
-                // Set the correct english on the question item for results display
-                q.CorrectEnglish = correctVerb?.English ?? "";
-            }
-
-            model.Score = score;
-            model.IsCompleted = true;
-
-            // Configuration is already part of the model from hidden fields
-            // No need to set it again
-
-            // Save Result to DB
-            var resultRecord = new TestResult
-            {
-                CorrectAnswers = score,
-                TotalQuestions = model.Questions.Count,
-                SubmissionDate = DateTime.UtcNow
-            };
-            _context.TestResults.Add(resultRecord);
-            await _context.SaveChangesAsync();
-
-            return View("TestExecution", model);
-        }
-
-        // 4. History Page
-        public async Task<IActionResult> History()
+        // API: Get test history
+        [HttpGet]
+        public async Task<IActionResult> GetHistory()
         {
             var history = await _context.TestResults
                 .OrderByDescending(t => t.SubmissionDate)
                 .ToListAsync();
-            return View(history);
+            return Json(history);
+        }
+
+        // API: Save test results (called every 5 minutes or on demand)
+        [HttpPost]
+        public async Task<IActionResult> SaveTestResults([FromBody] List<TestResultDto> results)
+        {
+            if (results == null || !results.Any())
+            {
+                return BadRequest("No results to save");
+            }
+
+            foreach (var result in results)
+            {
+                var testResult = new TestResult
+                {
+                    CorrectAnswers = result.CorrectAnswers,
+                    TotalQuestions = result.TotalQuestions,
+                    SubmissionDate = DateTime.UtcNow
+                };
+                _context.TestResults.Add(testResult);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { saved = results.Count });
         }
 
         // ==========================================================
-        // VERB MANAGEMENT SECTION
+        // VERB MANAGEMENT SECTION (Temporarily hidden but functional)
         // ==========================================================
 
-        // GET: Display the verb management page
+        [HttpGet]
         public IActionResult ManageVerbs(string status = "")
         {
             var model = new VerbManagementViewModel { StatusMessage = status };
             return View(model);
         }
 
-        // POST: Add a single verb
         [HttpPost]
         public async Task<IActionResult> AddSingleVerb(VerbManagementViewModel model)
         {
@@ -178,6 +99,9 @@ namespace GermanVerbTester.Controllers
                 _context.Verbs.Add(newVerb);
                 await _context.SaveChangesAsync();
 
+                // Refresh cache after adding
+                await _verbCache.RefreshCacheAsync();
+
                 return RedirectToAction("ManageVerbs", new { status = $"Successfully added '{newVerb.German}' ({newVerb.Category})." });
             }
 
@@ -185,7 +109,6 @@ namespace GermanVerbTester.Controllers
             return View("ManageVerbs", model);
         }
 
-        // POST: Upload JSON verbs
         [HttpPost]
         public async Task<IActionResult> UploadJsonVerbs(VerbManagementViewModel model)
         {
@@ -201,8 +124,6 @@ namespace GermanVerbTester.Controllers
                 using (var reader = new StreamReader(model.JsonFile.OpenReadStream()))
                 {
                     var jsonContent = await reader.ReadToEndAsync();
-
-                    // Deserialize JSON into an array of verb objects
                     var verbArray = JsonSerializer.Deserialize<List<VerbJsonDto>>(jsonContent, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
@@ -226,25 +147,27 @@ namespace GermanVerbTester.Controllers
                     }
 
                     await _context.SaveChangesAsync();
+
+                    // Refresh cache after bulk upload
+                    await _verbCache.RefreshCacheAsync();
+
                     return RedirectToAction("ManageVerbs", new { status = $"Successfully added {count} verbs from the uploaded file." });
                 }
             }
             catch (Exception ex)
             {
-                model.StatusMessage = $"Upload failed. Ensure the JSON format is: [{{\"german\": \"value\", \"english\": \"value\", \"category\": \"A1\"}}]. Error: {ex.Message}";
+                model.StatusMessage = $"Upload failed. Error: {ex.Message}";
                 return View("ManageVerbs", model);
             }
         }
 
         public async Task<IActionResult> DownloadVerbsJson()
         {
-            // Fetch all verbs from the database
             var verbs = await _context.Verbs
                 .OrderBy(v => v.Category)
                 .ThenBy(v => v.German)
                 .ToListAsync();
 
-            // Map to the DTO format for export
             var verbExport = verbs.Select(v => new VerbJsonDto
             {
                 German = v.German,
@@ -252,17 +175,13 @@ namespace GermanVerbTester.Controllers
                 Category = v.Category
             }).ToList();
 
-            // Serialize to JSON with formatting
             var jsonContent = JsonSerializer.Serialize(verbExport, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
 
-            // Convert to bytes
             var bytes = System.Text.Encoding.UTF8.GetBytes(jsonContent);
-
-            // Return as downloadable file
             return File(bytes, "application/json", $"german-verbs-{DateTime.Now:yyyy-MM-dd}.json");
         }
 
@@ -272,6 +191,11 @@ namespace GermanVerbTester.Controllers
             public string? English { get; set; }
             public string? Category { get; set; }
         }
+
+        public class TestResultDto
+        {
+            public int CorrectAnswers { get; set; }
+            public int TotalQuestions { get; set; }
+        }
     }
-   
 }
