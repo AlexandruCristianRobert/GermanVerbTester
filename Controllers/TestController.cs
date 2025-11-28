@@ -134,7 +134,7 @@ namespace GermanVerbTester.Controllers
             {
                 CorrectAnswers = score,
                 TotalQuestions = model.Questions.Count,
-                SubmissionDate = DateTime.Now
+                SubmissionDate = DateTime.UtcNow
             };
             _context.TestResults.Add(resultRecord);
             await _context.SaveChangesAsync();

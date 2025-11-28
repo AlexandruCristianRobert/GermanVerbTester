@@ -5,22 +5,23 @@
     {
         <div class="alert alert-info text-center">
             <h3>You got @Model.Score / @Model.Questions.Count correct!</h3>
-            @{
-                var categoriesParam = string.Join(",", Model.SelectedCategories);
-            }
-            <a asp-action="Index"
-               asp-route-numberOfVerbs="@Model.NumberOfVerbs"
-               asp-route-categories="@categoriesParam"
-               class="btn btn-primary btn-sm mt-2">Take Another Test</a>
+            <form asp-action="StartTest" method="post" class="d-inline">
+                <input type="hidden" name="NumberOfVerbs" value="@Model.NumberOfVerbs" />
+                @for (int j = 0; j < Model.SelectedCategories.Count; j++)
+                {
+                    <input type="hidden" name="SelectedCategories[@j]" value="@Model.SelectedCategories[j]" />
+                }
+                <button type="submit" class="btn btn-primary btn-sm mt-2">Take Another Test</button>
+            </form>
             <a asp-action="History" class="btn btn-secondary btn-sm mt-2">View History</a>
         </div>
     }
     else
     {
-        <h2>Translate the following:</h2>
+        <h2 class="text-center">Translate the following:</h2>
     }
 
-    <form asp-action="SubmitTest" method="post">
+    <form asp-action="SubmitTest" method="post" autocomplete="off">
         <!-- Store configuration in hidden fields -->
         <input type="hidden" asp-for="NumberOfVerbs" />
         @for (int j = 0; j < Model.SelectedCategories.Count; j++)
@@ -37,14 +38,27 @@
 
             <div class="card mb-3">
                 <div class="card-body @(Model.IsCompleted ? (Model.Questions[i].IsCorrect ? "bg-success bg-opacity-25" : "bg-danger bg-opacity-25") : "")">
-                    <div class="row align-items-center">
-                        <div class="col-md-3">
-                            <h4 class="mb-0">@Model.Questions[i].German</h4>
+                    <div class="row align-items-center g-3">
+                        <div class="col-12 col-md-3 text-center text-md-start">
+                            <h4 class="mb-0 verb-toggle"
+                                data-german="@Model.Questions[i].German"
+                                data-english="@Model.Questions[i].CorrectEnglish"
+                                data-current="german"
+                                style="cursor: pointer; user-select: none;">
+                                @Model.Questions[i].German
+                            </h4>
                         </div>
-                        <div class="col-md-5">
+                        <div class="col-12 col-md-5">
                             @if (!Model.IsCompleted)
                             {
-                                <input asp-for="Questions[i].UserAnswer" class="form-control" placeholder="English translation..." required />
+                                <input asp-for="Questions[i].UserAnswer"
+                                       class="form-control"
+                                       placeholder="English translation..."
+                                       autocomplete="off"
+                                       autocorrect="off"
+                                       autocapitalize="off"
+                                       spellcheck="false"
+                                       required />
                             }
                             else
                             {
@@ -54,7 +68,7 @@
 
                         @if (Model.IsCompleted)
                         {
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4 text-center text-md-start">
                                 @if (!Model.Questions[i].IsCorrect)
                                 {
                                     <span class="fw-bold text-danger">Correct: @Model.Questions[i].CorrectEnglish</span>
@@ -78,3 +92,27 @@
         }
     </form>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const verbToggles = document.querySelectorAll('.verb-toggle');
+
+            verbToggles.forEach(function(element) {
+                element.addEventListener('dblclick', function() {
+                    const german = this.getAttribute('data-german');
+                    const english = this.getAttribute('data-english');
+                    const current = this.getAttribute('data-current');
+
+                    if (current === 'german') {
+                        this.textContent = english;
+                        this.setAttribute('data-current', 'english');
+                    } else {
+                        this.textContent = german;
+                        this.setAttribute('data-current', 'german');
+                    }
+                });
+            });
+        });
+    </script>
+}
