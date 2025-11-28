@@ -5,7 +5,13 @@
     {
         <div class="alert alert-info text-center">
             <h3>You got @Model.Score / @Model.Questions.Count correct!</h3>
-            <a asp-action="Index" class="btn btn-primary btn-sm mt-2">Take Another Test</a>
+            @{
+                var categoriesParam = string.Join(",", Model.SelectedCategories);
+            }
+            <a asp-action="Index"
+               asp-route-numberOfVerbs="@Model.NumberOfVerbs"
+               asp-route-categories="@categoriesParam"
+               class="btn btn-primary btn-sm mt-2">Take Another Test</a>
             <a asp-action="History" class="btn btn-secondary btn-sm mt-2">View History</a>
         </div>
     }
@@ -15,6 +21,13 @@
     }
 
     <form asp-action="SubmitTest" method="post">
+        <!-- Store configuration in hidden fields -->
+        <input type="hidden" asp-for="NumberOfVerbs" />
+        @for (int j = 0; j < Model.SelectedCategories.Count; j++)
+        {
+            <input type="hidden" name="SelectedCategories[@j]" value="@Model.SelectedCategories[j]" />
+        }
+
         @for (int i = 0; i < Model.Questions.Count; i++)
         {
             // Hidden fields to ensure data persists on postback

@@ -1,25 +1,70 @@
-﻿@{
+﻿@model GermanVerbTester.Models.TestConfigurationViewModel
+
+@{
     ViewData["Title"] = "Configure Test";
 }
 
 <div class="text-center mt-5">
     <h1 class="display-4">German Verb Trainer</h1>
-    <p class="lead">Select the number of verbs you want to practice.</p>
+    <p class="lead">Configure your test settings below.</p>
 
-    <div class="card mx-auto mt-4" style="max-width: 400px;">
+    <div class="card mx-auto mt-4" style="max-width: 600px;">
         <div class="card-body">
             <form asp-action="StartTest" method="post">
-                <div class="form-group mb-3">
-                    <label for="numberOfVerbs" class="form-label fw-bold">Number of Verbs:</label>
-                    <select name="numberOfVerbs" class="form-select">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <!-- Number of Verbs -->
+                <div class="form-group mb-4">
+                    <label asp-for="NumberOfVerbs" class="form-label fw-bold">Number of Verbs:</label>
+                    <select asp-for="NumberOfVerbs" class="form-select">
                         <option value="5">5 Verbs</option>
-                        <option value="10">10 Verbs</option>
+                        <option value="10" selected>10 Verbs</option>
                         <option value="15">15 Verbs</option>
                         <option value="20">20 Verbs</option>
+                        <option value="30">30 Verbs</option>
+                        <option value="50">50 Verbs</option>
                     </select>
+                    <span asp-validation-for="NumberOfVerbs" class="text-danger"></span>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">Start Test</button>
+
+                <!-- Category Selection -->
+                <div class="form-group mb-4">
+                    <label class="form-label fw-bold d-block">Select Categories:</label>
+                    <div class="row g-2">
+                        @for (int i = 0; i < Model.AvailableCategories.Count; i++)
+                        {
+                            var category = Model.AvailableCategories[i];
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="SelectedCategories"
+                                           value="@category"
+                                           id="category_@category"
+                                           @(Model.SelectedCategories.Contains(category) ? "checked" : "") />
+                                    <label class="form-check-label" for="category_@category">
+                                        <span class="badge bg-primary">@category</span>
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <span asp-validation-for="SelectedCategories" class="text-danger"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 btn-lg mt-3">Start Test</button>
             </form>
+
+            <div class="mt-3">
+                <a asp-action="ManageVerbs" class="btn btn-outline-secondary btn-sm">Manage Verbs</a>
+                <a asp-action="History" class="btn btn-outline-info btn-sm">View History</a>
+            </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

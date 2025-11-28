@@ -7,6 +7,9 @@ namespace GermanVerbTester.Models
         public List<QuestionItem> Questions { get; set; } = new List<QuestionItem>();
         public int Score { get; set; }
         public bool IsCompleted { get; set; } = false;
+
+        public int NumberOfVerbs { get; set; }
+        public List<string> SelectedCategories { get; set; } = new List<string>();
     }
 
     public class QuestionItem

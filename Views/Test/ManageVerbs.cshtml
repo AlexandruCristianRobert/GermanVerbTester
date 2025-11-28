@@ -5,7 +5,12 @@
 }
 
 <div class="container mt-4">
-    <h2 class="mb-4">Verb Data Management</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Verb Data Management</h2>
+        <a asp-action="DownloadVerbsJson" class="btn btn-success">
+            <i class="bi bi-download"></i> Download All Verbs (JSON)
+        </a>
+    </div>
 
     @if (!string.IsNullOrEmpty(Model.StatusMessage))
     {
@@ -34,6 +39,19 @@
                             <input asp-for="EnglishVerb" class="form-control" placeholder="e.g., to go" />
                             <span asp-validation-for="EnglishVerb" class="text-danger"></span>
                         </div>
+                        <div class="mb-3">
+                            <label asp-for="Category" class="form-label">Category</label>
+                            <select asp-for="Category" class="form-select">
+                                <option value="">Select a category...</option>
+                                <option value="A1">A1</option>
+                                <option value="A2">A2</option>
+                                <option value="B1">B1</option>
+                                <option value="B2">B2</option>
+                                <option value="C1">C1</option>
+                                <option value="C2">C2</option>
+                            </select>
+                            <span asp-validation-for="Category" class="text-danger"></span>
+                        </div>
                         <button type="submit" class="btn btn-primary w-100">Save Verb</button>
                     </form>
                 </div>
@@ -47,8 +65,20 @@
                     <h5 class="mb-0">Bulk JSON Upload</h5>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Upload a JSON file containing key-value pairs of German verbs and English translations.</p>
-                    <p class="text-muted small">Format must be: <code>{"kommen": "to come", "sehen": "to see"}</code></p>
+                    <p class="text-muted">Upload a JSON file containing an array of verb objects.</p>
+                    <p class="text-muted small">Format must be:</p>
+                    <pre class="bg-light p-2 small"><code>[
+  {
+    "german": "kommen",
+    "english": "to come",
+    "category": "A1"
+  },
+  {
+    "german": "sehen",
+    "english": "to see",
+    "category": "A2"
+  }
+]</code></pre>
 
                     <form asp-action="UploadJsonVerbs" method="post" enctype="multipart/form-data">
                         <div class="mb-3">

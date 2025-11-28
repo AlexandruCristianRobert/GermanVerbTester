@@ -5,18 +5,19 @@ namespace GermanVerbTester.Models
 {
     public class VerbManagementViewModel
     {
-        // For single verb input
         [Required(ErrorMessage = "German verb is required.")]
         public string? GermanVerb { get; set; }
 
         [Required(ErrorMessage = "English translation is required.")]
         public string? EnglishVerb { get; set; }
 
-        // For JSON file upload
-        [Display(Name = "JSON File (Key: German, Value: English)")]
+        [Required(ErrorMessage = "Category is required.")]
+        [Display(Name = "Category (A1, A2, B1, B2, C1, C2)")]
+        public string? Category { get; set; }
+
+        [Display(Name = "JSON File (Array of objects with german, english, category)")]
         public IFormFile? JsonFile { get; set; }
 
-        // For feedback messages
         public string StatusMessage { get; set; } = string.Empty;
     }
 }

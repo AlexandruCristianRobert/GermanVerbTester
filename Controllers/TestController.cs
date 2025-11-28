@@ -21,28 +21,70 @@ namespace GermanVerbTester.Controllers
         }
 
         // 1. Homepage: Configuration
-        public IActionResult Index()
+        public IActionResult Index(int? numberOfVerbs = null, string? categories = null)
         {
-            return View();
+            var model = new TestConfigurationViewModel();
+
+            // If parameters are provided, restore the previous configuration
+            if (numberOfVerbs.HasValue)
+            {
+                model.NumberOfVerbs = numberOfVerbs.Value;
+            }
+
+            if (!string.IsNullOrEmpty(categories))
+            {
+                model.SelectedCategories = categories.Split(',').ToList();
+            }
+
+            return View(model);
         }
 
         // 2. Generate Test
         [HttpPost]
-        public async Task<IActionResult> StartTest(int numberOfVerbs)
+        public async Task<IActionResult> StartTest(TestConfigurationViewModel config)
         {
-            // Fetch random verbs using GUID ordering
+            if (!ModelState.IsValid)
+            {
+                return View("Index", config);
+            }
+
+            if (config.SelectedCategories == null || !config.SelectedCategories.Any())
+            {
+                ModelState.AddModelError("SelectedCategories", "Please select at least one category.");
+                return View("Index", config);
+            }
+
+            // Fetch random verbs filtered by selected categories
             var verbs = await _context.Verbs
+                .Where(v => config.SelectedCategories.Contains(v.Category))
                 .OrderBy(r => Guid.NewGuid())
-                .Take(numberOfVerbs)
+                .Take(config.NumberOfVerbs)
                 .ToListAsync();
 
-            var viewModel = new TestViewModel();
+            if (!verbs.Any())
+            {
+                ModelState.AddModelError("", "No verbs found for the selected categories. Please add verbs first.");
+                return View("Index", config);
+            }
+
+            if (verbs.Count < config.NumberOfVerbs)
+            {
+                ModelState.AddModelError("", $"Only {verbs.Count} verbs available for selected categories. Adjust your selection.");
+                return View("Index", config);
+            }
+
+            var viewModel = new TestViewModel
+            {
+                // Store the configuration for later use
+                NumberOfVerbs = config.NumberOfVerbs,
+                SelectedCategories = config.SelectedCategories
+            };
+
             foreach (var v in verbs)
             {
                 viewModel.Questions.Add(new QuestionItem
                 {
                     VerbId = v.Id,
-                    // Use property names from the model: GermanVerb and EnglishVerb
                     German = v.German,
                     CorrectEnglish = v.English,
                     UserAnswer = ""
@@ -83,6 +125,9 @@ namespace GermanVerbTester.Controllers
 
             model.Score = score;
             model.IsCompleted = true;
+
+            // Configuration is already part of the model from hidden fields
+            // No need to set it again
 
             // Save Result to DB
             var resultRecord = new TestResult
@@ -126,16 +171,17 @@ namespace GermanVerbTester.Controllers
                 var newVerb = new Verb
                 {
                     German = model.GermanVerb?.Trim() ?? string.Empty,
-                    English = model.EnglishVerb?.Trim() ?? string.Empty
+                    English = model.EnglishVerb?.Trim() ?? string.Empty,
+                    Category = model.Category?.Trim() ?? string.Empty
                 };
 
                 _context.Verbs.Add(newVerb);
                 await _context.SaveChangesAsync();
 
-                return RedirectToAction("ManageVerbs", new { status = $"Successfully added '{newVerb.German}'." });
+                return RedirectToAction("ManageVerbs", new { status = $"Successfully added '{newVerb.German}' ({newVerb.Category})." });
             }
 
-            model.StatusMessage = "Please ensure both German and English fields are filled.";
+            model.StatusMessage = "Please ensure all fields are filled.";
             return View("ManageVerbs", model);
         }
 
@@ -156,23 +202,24 @@ namespace GermanVerbTester.Controllers
                 {
                     var jsonContent = await reader.ReadToEndAsync();
 
-                    // Deserialize JSON into a Dictionary<German, English>
-                    var verbDictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonContent, new JsonSerializerOptions
+                    // Deserialize JSON into an array of verb objects
+                    var verbArray = JsonSerializer.Deserialize<List<VerbJsonDto>>(jsonContent, new JsonSerializerOptions
                     {
-                        PropertyNameCaseInsensitive = false // Keys are case sensitive (German verbs)
+                        PropertyNameCaseInsensitive = true
                     });
 
-                    if (verbDictionary == null || !verbDictionary.Any())
+                    if (verbArray == null || !verbArray.Any())
                     {
                         throw new Exception("JSON file is empty or formatted incorrectly.");
                     }
 
-                    foreach (var pair in verbDictionary)
+                    foreach (var item in verbArray)
                     {
                         var newVerb = new Verb
                         {
-                            German = pair.Key.Trim(),
-                            English = pair.Value.Trim()
+                            German = item.German?.Trim() ?? string.Empty,
+                            English = item.English?.Trim() ?? string.Empty,
+                            Category = item.Category?.Trim() ?? string.Empty
                         };
                         _context.Verbs.Add(newVerb);
                         count++;
@@ -184,9 +231,47 @@ namespace GermanVerbTester.Controllers
             }
             catch (Exception ex)
             {
-                model.StatusMessage = $"Upload failed. Ensure the JSON format is strictly '{{ \"german\": \"english\" }}'. Error: {ex.Message}";
+                model.StatusMessage = $"Upload failed. Ensure the JSON format is: [{{\"german\": \"value\", \"english\": \"value\", \"category\": \"A1\"}}]. Error: {ex.Message}";
                 return View("ManageVerbs", model);
             }
         }
+
+        public async Task<IActionResult> DownloadVerbsJson()
+        {
+            // Fetch all verbs from the database
+            var verbs = await _context.Verbs
+                .OrderBy(v => v.Category)
+                .ThenBy(v => v.German)
+                .ToListAsync();
+
+            // Map to the DTO format for export
+            var verbExport = verbs.Select(v => new VerbJsonDto
+            {
+                German = v.German,
+                English = v.English,
+                Category = v.Category
+            }).ToList();
+
+            // Serialize to JSON with formatting
+            var jsonContent = JsonSerializer.Serialize(verbExport, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            // Convert to bytes
+            var bytes = System.Text.Encoding.UTF8.GetBytes(jsonContent);
+
+            // Return as downloadable file
+            return File(bytes, "application/json", $"german-verbs-{DateTime.Now:yyyy-MM-dd}.json");
+        }
+
+        private class VerbJsonDto
+        {
+            public string? German { get; set; }
+            public string? English { get; set; }
+            public string? Category { get; set; }
+        }
     }
+   
 }
