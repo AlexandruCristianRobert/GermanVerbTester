@@ -52,6 +52,11 @@
                             </select>
                             <span asp-validation-for="Category" class="text-danger"></span>
                         </div>
+                        <div class="mb-3">
+                            <label asp-for="Hint" class="form-label">Hint (Optional)</label>
+                            <input asp-for="Hint" class="form-control" placeholder="e.g., Movement verb" />
+                            <span asp-validation-for="Hint" class="text-danger"></span>
+                        </div>
                         <button type="submit" class="btn btn-primary w-100">Save Verb</button>
                     </form>
                 </div>
@@ -71,12 +76,14 @@
   {
     "german": "kommen",
     "english": "to come",
-    "category": "A1"
+    "category": "A1",
+    "hint": "Movement verb"
   },
   {
     "german": "sehen",
     "english": "to see",
-    "category": "A2"
+    "category": "A2",
+    "hint": "Sensory verb"
   }
 ]</code></pre>
 

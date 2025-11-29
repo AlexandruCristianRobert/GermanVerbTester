@@ -93,7 +93,8 @@ namespace GermanVerbTester.Controllers
                 {
                     German = model.GermanVerb?.Trim() ?? string.Empty,
                     English = model.EnglishVerb?.Trim() ?? string.Empty,
-                    Category = model.Category?.Trim() ?? string.Empty
+                    Category = model.Category?.Trim() ?? string.Empty,
+                    Hint = model.Hint?.Trim() ?? string.Empty
                 };
 
                 _context.Verbs.Add(newVerb);
@@ -140,7 +141,8 @@ namespace GermanVerbTester.Controllers
                         {
                             German = item.German?.Trim() ?? string.Empty,
                             English = item.English?.Trim() ?? string.Empty,
-                            Category = item.Category?.Trim() ?? string.Empty
+                            Category = item.Category?.Trim() ?? string.Empty,
+                            Hint = item.Hint?.Trim()
                         };
                         _context.Verbs.Add(newVerb);
                         count++;
@@ -172,7 +174,8 @@ namespace GermanVerbTester.Controllers
             {
                 German = v.German,
                 English = v.English,
-                Category = v.Category
+                Category = v.Category,
+                Hint = v.Hint
             }).ToList();
 
             var jsonContent = JsonSerializer.Serialize(verbExport, new JsonSerializerOptions
@@ -190,6 +193,7 @@ namespace GermanVerbTester.Controllers
             public string? German { get; set; }
             public string? English { get; set; }
             public string? Category { get; set; }
+            public string? Hint { get; set; }
         }
 
         public class TestResultDto

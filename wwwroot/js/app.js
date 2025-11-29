@@ -8,7 +8,7 @@ let currentConfig = {
 };
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     await loadVerbs();
     initializeEventListeners();
     populateCategories();
@@ -31,7 +31,7 @@ async function loadVerbs() {
 function populateCategories() {
     const categories = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
     const container = document.getElementById('categoryContainer');
-    
+
     container.innerHTML = categories.map(cat => `
         <div class="col-6 col-md-4">
             <div class="form-check">
@@ -112,6 +112,7 @@ function startTest() {
             verbId: v.id,
             german: v.german,
             english: v.english,
+            hint: v.hint,
             userAnswer: '',
             isCorrect: false
         })),
@@ -126,7 +127,7 @@ function startTest() {
 // Render test questions
 function renderTest() {
     const container = document.getElementById('questionsContainer');
-    
+
     container.innerHTML = currentTest.questions.map((q, i) => `
         <div class="card mb-3">
             <div class="card-body ${currentTest.isCompleted ? (q.isCorrect ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25') : ''}">
@@ -134,9 +135,10 @@ function renderTest() {
                     <div class="col-12 col-md-3 text-center text-md-start">
                         <h4 class="mb-0 verb-toggle" 
                             data-german="${q.german}" 
-                            data-english="${q.english}"
+                            data-hint="${q.hint || ''}"
                             data-current="german"
-                            style="cursor: pointer; user-select: none;">
+                            style="cursor: pointer; user-select: none;"
+                            title="${q.hint ? 'Double-click to see hint' : 'No hint available'}">
                             ${q.german}
                         </h4>
                     </div>
@@ -172,16 +174,16 @@ function renderTest() {
         </div>
     `).join('');
 
-    // Add double-click listeners for verb toggle
+    // Add double-click listeners for verb toggle (show hint instead of English)
     document.querySelectorAll('.verb-toggle').forEach(element => {
-        element.addEventListener('dblclick', function() {
+        element.addEventListener('dblclick', function () {
             const german = this.getAttribute('data-german');
-            const english = this.getAttribute('data-english');
+            const hint = this.getAttribute('data-hint');
             const current = this.getAttribute('data-current');
 
-            if (current === 'german') {
-                this.textContent = english;
-                this.setAttribute('data-current', 'english');
+            if (current === 'german' && hint) {
+                this.textContent = hint;
+                this.setAttribute('data-current', 'hint');
             } else {
                 this.textContent = german;
                 this.setAttribute('data-current', 'german');
@@ -223,16 +225,16 @@ function submitTest(e) {
     });
 
     // Update UI
-    document.getElementById('scoreDisplay').textContent = 
+    document.getElementById('scoreDisplay').textContent =
         `You got ${currentTest.score} / ${currentTest.questions.length} correct!`;
-    
+
     renderTest();
 }
 
 // Take another test with same settings
 function takeAnotherTest() {
     document.getElementById('numberOfVerbs').value = currentConfig.numberOfVerbs;
-    
+
     // Restore category selections
     document.querySelectorAll('.category-checkbox').forEach(cb => {
         cb.checked = currentConfig.selectedCategories.includes(cb.value);
@@ -246,12 +248,12 @@ async function loadHistory() {
     try {
         const response = await fetch('/Test/GetHistory');
         const history = await response.json();
-        
+
         const tbody = document.getElementById('historyTableBody');
         tbody.innerHTML = history.map(item => {
             const date = new Date(item.submissionDate).toLocaleString();
             const percentage = Math.round((item.correctAnswers / item.totalQuestions) * 100);
-            
+
             return `
                 <tr>
                     <td>${date}</td>

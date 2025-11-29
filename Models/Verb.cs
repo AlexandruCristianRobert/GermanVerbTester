@@ -6,5 +6,6 @@
         public string German { get; set; } = string.Empty;
         public string English { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
+        public string Hint { get; set; } = string.Empty;
     }
 }

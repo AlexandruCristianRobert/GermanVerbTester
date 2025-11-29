@@ -15,7 +15,10 @@ namespace GermanVerbTester.Models
         [Display(Name = "Category (A1, A2, B1, B2, C1, C2)")]
         public string? Category { get; set; }
 
-        [Display(Name = "JSON File (Array of objects with german, english, category)")]
+        [Display(Name = "Hint (Optional)")]
+        public string Hint { get; set; } = string.Empty;
+
+        [Display(Name = "JSON File (Array of objects with german, english, category, hint)")]
         public IFormFile? JsonFile { get; set; }
 
         public string StatusMessage { get; set; } = string.Empty;
