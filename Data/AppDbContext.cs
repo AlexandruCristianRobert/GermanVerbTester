@@ -9,6 +9,8 @@ namespace GermanVerbTester.Data
 
         public DbSet<Verb> Verbs { get; set; }
         public DbSet<TestResult> TestResults { get; set; }
+        public DbSet<Preposition> Prepositions { get; set; }
+        public DbSet<PrepositionTestResult> PrepositionTestResults { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

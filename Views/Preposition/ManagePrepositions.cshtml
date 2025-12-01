@@ -1,0 +1,104 @@
+@model GermanVerbTester.Models.PrepositionManagementViewModel
+
+@{
+    ViewData["Title"] = "Manage Prepositions";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Preposition Data Management</h2>
+        <a asp-action="DownloadPrepositionsJson" class="btn btn-success">
+            <i class="bi bi-download"></i> Download All Prepositions (JSON)
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @Model.StatusMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Section 1: Add Single Preposition -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Add Single Preposition</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AddSinglePreposition" method="post">
+                        <div class="mb-3">
+                            <label asp-for="GermanPreposition" class="form-label">German Preposition</label>
+                            <input asp-for="GermanPreposition" class="form-control" placeholder="e.g., mit" />
+                            <span asp-validation-for="GermanPreposition" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="EnglishPreposition" class="form-label">English Translation</label>
+                            <input asp-for="EnglishPreposition" class="form-control" placeholder="e.g., with" />
+                            <span asp-validation-for="EnglishPreposition" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Case" class="form-label">Case</label>
+                            <select asp-for="Case" class="form-select">
+                                <option value="">Select a case...</option>
+                                <option value="Accusative">Accusative</option>
+                                <option value="Dative">Dative</option>
+                                <option value="Both">Both (Two-Way)</option>
+                            </select>
+                            <span asp-validation-for="Case" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Explanation" class="form-label">Explanation</label>
+                            <textarea asp-for="Explanation" class="form-control" rows="3" placeholder="e.g., Always takes dative case"></textarea>
+                            <span asp-validation-for="Explanation" class="text-danger"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Save Preposition</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Bulk JSON Upload -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Bulk JSON Upload</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Upload a JSON file containing an array of preposition objects.</p>
+                    <p class="text-muted small">Format must be:</p>
+                    <pre class="bg-light p-2 small"><code>[
+  {
+    "german": "mit",
+    "english": "with",
+    "case": "Dative",
+    "explanation": "Always takes dative case"
+  },
+  {
+    "german": "für",
+    "english": "for",
+    "case": "Accusative",
+    "explanation": "Always takes accusative case"
+  }
+]</code></pre>
+
+                    <form asp-action="UploadJsonPrepositions" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label asp-for="JsonFile" class="form-label"></label>
+                            <input asp-for="JsonFile" type="file" class="form-control" accept=".json" required />
+                        </div>
+                        <button type="submit" class="btn btn-secondary w-100">Upload Prepositions</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
