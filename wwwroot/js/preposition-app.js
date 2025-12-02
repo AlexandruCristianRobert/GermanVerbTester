@@ -59,7 +59,7 @@ function generateMultipleChoiceOptions(correctEnglish, allPrepositions) {
     // Get all other English translations
     const otherTranslations = allPrepositions
         .map(p => p.english)
-        .filter(e => e !== correctEnglish);
+        .filter(e => e.toLowerCase() !== correctEnglish.toLowerCase());
 
     // Shuffle and pick 3 random wrong answers
     const shuffled = otherTranslations.sort(() => 0.5 - Math.random());
@@ -160,14 +160,14 @@ function renderTest() {
                         ` : `
                             <div class="mb-2">
                                 <strong>Your answer:</strong> 
-                                <span class="${q.userTranslation === q.english ? 'text-success' : 'text-danger'}">
+                                <span class="${q.userTranslation.toLowerCase() === q.english.toLowerCase() ? 'text-success fw-bold' : 'text-danger fw-bold'}">
                                     ${q.userTranslation || 'Not selected'}
                                 </span>
                             </div>
-                            ${q.userTranslation !== q.english ? `
+                            ${q.userTranslation.toLowerCase() !== q.english.toLowerCase() ? `
                                 <div>
                                     <strong>Correct answer:</strong> 
-                                    <span class="text-success">${q.english}</span>
+                                    <span class="text-success fw-bold">${q.english}</span>
                                 </div>
                             ` : ''}
                         `}
@@ -189,11 +189,11 @@ function renderTest() {
                             <div>
                                 <div class="mb-2">
                                     <strong>Your case:</strong> 
-                                    <span class="badge ${q.userCase === q.correctCase || (q.correctCase === 'Both' && q.userCase) ? 'bg-success' : 'bg-danger'}">
+                                    <span class="badge ${q.userCase.toLowerCase() === q.correctCase.toLowerCase() || (q.correctCase.toLowerCase() === 'both' && q.userCase) ? 'bg-success' : 'bg-danger'}">
                                         ${q.userCase || 'Not selected'}
                                     </span>
                                 </div>
-                                ${q.userCase !== q.correctCase && !(q.correctCase === 'Both' && q.userCase) ? `
+                                ${q.userCase.toLowerCase() !== q.correctCase.toLowerCase() && !(q.correctCase.toLowerCase() === 'both' && q.userCase) ? `
                                     <div>
                                         <strong>Correct case:</strong> 
                                         <span class="badge bg-info">${q.correctCase}</span>
@@ -248,12 +248,12 @@ function submitTest(e) {
         currentTest.questions[index].userCase = radio.value;
     });
 
-    // Grade answers
+    // Grade answers (case-insensitive)
     currentTest.score = 0;
     currentTest.questions.forEach(q => {
-        const translationCorrect = q.userTranslation === q.english;
-        const caseCorrect = q.userCase === q.correctCase ||
-            (q.correctCase === 'Both' && (q.userCase === 'Accusative' || q.userCase === 'Dative'));
+        const translationCorrect = q.userTranslation.toLowerCase() === q.english.toLowerCase();
+        const caseCorrect = q.userCase.toLowerCase() === q.correctCase.toLowerCase() ||
+            (q.correctCase.toLowerCase() === 'both' && (q.userCase.toLowerCase() === 'accusative' || q.userCase.toLowerCase() === 'dative'));
 
         q.isCorrect = translationCorrect && caseCorrect;
         if (q.isCorrect) currentTest.score++;
