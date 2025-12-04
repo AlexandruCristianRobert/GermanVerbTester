@@ -39,6 +39,18 @@ namespace GermanVerbTester.Controllers
             return Json(verbs);
         }
 
+        // API: Get selected verbs from VerbSelection table
+        [HttpGet]
+        public async Task<IActionResult> GetSelectedVerbs()
+        {
+            var selectedVerbs = await _context.VerbSelections
+                .Include(vs => vs.Verb)
+                .Select(vs => vs.Verb)
+                .ToListAsync();
+
+            return Json(selectedVerbs);
+        }
+
         // API: Get test history
         [HttpGet]
         public async Task<IActionResult> GetHistory()
@@ -111,6 +123,85 @@ namespace GermanVerbTester.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> SelectRandomVerbs(VerbManagementViewModel model)
+        {
+            if (model.SelectedCategoriesForRandom == null || !model.SelectedCategoriesForRandom.Any())
+            {
+                return RedirectToAction("ManageVerbs", new { status = "Error: Please select at least one category." });
+            }
+
+            try
+            {
+                // Get verbs filtered by selected categories
+                var filteredVerbs = await _context.Verbs
+                    .Where(v => model.SelectedCategoriesForRandom.Contains(v.Category))
+                    .ToListAsync();
+
+                if (!filteredVerbs.Any())
+                {
+                    return RedirectToAction("ManageVerbs", new { status = "Error: No verbs found for the selected categories." });
+                }
+
+                // Randomly select the specified number of verbs
+                var random = new Random();
+                var selectedVerbs = filteredVerbs
+                    .OrderBy(x => random.Next())
+                    .Take(model.NumberOfVerbsToSelect)
+                    .ToList();
+
+                // Clear existing selections
+                var existingSelections = await _context.VerbSelections.ToListAsync();
+                _context.VerbSelections.RemoveRange(existingSelections);
+
+                // Add new selections
+                var verbSelections = selectedVerbs.Select(v => new VerbSelection
+                {
+                    VerbId = v.Id,
+                    CreatedAt = DateTime.UtcNow
+                }).ToList();
+
+                _context.VerbSelections.AddRange(verbSelections);
+                await _context.SaveChangesAsync();
+
+                var categoriesStr = string.Join(", ", model.SelectedCategoriesForRandom);
+                return RedirectToAction("ManageVerbs", new { status = $"Successfully selected {selectedVerbs.Count} random verbs from categories: {categoriesStr}." });
+            }
+            catch (Exception ex)
+            {
+                return RedirectToAction("ManageVerbs", new { status = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ClearVerbSelections()
+        {
+            try
+            {
+                var existingSelections = await _context.VerbSelections.ToListAsync();
+                _context.VerbSelections.RemoveRange(existingSelections);
+                await _context.SaveChangesAsync();
+
+                return RedirectToAction("ManageVerbs", new { status = "Successfully cleared all verb selections." });
+            }
+            catch (Exception ex)
+            {
+                return RedirectToAction("ManageVerbs", new { status = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ViewSelectedVerbs()
+        {
+            var selectedVerbs = await _context.VerbSelections
+                .Include(vs => vs.Verb)
+                .OrderBy(vs => vs.CreatedAt)
+                .Select(vs => vs.Verb)
+                .ToListAsync();
+
+            return Json(selectedVerbs);
+        }
+
+        [HttpPost]
         public async Task<IActionResult> UploadJsonVerbs(VerbManagementViewModel model)
         {
             if (model.JsonFile == null || model.JsonFile.Length == 0)
@@ -142,7 +233,7 @@ namespace GermanVerbTester.Controllers
                             German = item.German?.Trim() ?? string.Empty,
                             English = item.English?.Trim() ?? string.Empty,
                             Category = item.Category?.Trim() ?? string.Empty,
-                            Hint = item.Hint?.Trim()
+                            Hint = item.Hint?.Trim() ?? string.Empty
                         };
                         _context.Verbs.Add(newVerb);
                         count++;

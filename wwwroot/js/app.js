@@ -1,5 +1,6 @@
 // Global state
 let verbsData = [];
+let selectedVerbsData = []; // Verbs from VerbSelection table
 let currentTest = null;
 let testResults = [];
 let currentConfig = {
@@ -10,6 +11,7 @@ let currentConfig = {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function () {
     await loadVerbs();
+    await loadSelectedVerbs();
     initializeEventListeners();
     populateCategories();
     startAutoSave();
@@ -27,12 +29,25 @@ async function loadVerbs() {
     }
 }
 
+// Load selected verbs from VerbSelection table
+async function loadSelectedVerbs() {
+    try {
+        const response = await fetch('/Test/GetSelectedVerbs');
+        selectedVerbsData = await response.json();
+        console.log(`Loaded ${selectedVerbsData.length} selected verbs`);
+    } catch (error) {
+        console.error('Error loading selected verbs:', error);
+        selectedVerbsData = [];
+    }
+}
+
 // Populate category checkboxes
 function populateCategories() {
     const categories = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
     const container = document.getElementById('categoryContainer');
 
-    container.innerHTML = categories.map(cat => `
+    // Add regular categories
+    let html = categories.map(cat => `
         <div class="col-6 col-md-4">
             <div class="form-check">
                 <input class="form-check-input category-checkbox" 
@@ -45,6 +60,24 @@ function populateCategories() {
             </div>
         </div>
     `).join('');
+
+    // Add Manual option
+    html += `
+        <div class="col-6 col-md-4">
+            <div class="form-check">
+                <input class="form-check-input category-checkbox" 
+                       type="checkbox" 
+                       value="Manual" 
+                       id="category_Manual">
+                <label class="form-check-label" for="category_Manual">
+                    <span class="badge bg-warning text-dark">Manual</span>
+                    <small class="text-muted d-block">(${selectedVerbsData.length} verbs)</small>
+                </label>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
 }
 
 // Initialize all event listeners
@@ -87,9 +120,69 @@ function startTest() {
         return;
     }
 
-    // Filter verbs by selected categories
-    const availableVerbs = verbsData.filter(v => selectedCategories.includes(v.category));
+    const includeManual = selectedCategories.includes('Manual');
+    const regularCategories = selectedCategories.filter(c => c !== 'Manual');
 
+    // Get verbs from regular categories
+    let availableVerbs = [];
+    if (regularCategories.length > 0) {
+        availableVerbs = verbsData.filter(v => regularCategories.includes(v.category));
+    }
+
+    // Get verbs from Manual selection (VerbSelection table)
+    let manualVerbs = [];
+    if (includeManual && selectedVerbsData.length > 0) {
+        manualVerbs = [...selectedVerbsData];
+    }
+
+    // If only Manual is selected
+    if (regularCategories.length === 0 && includeManual) {
+        if (manualVerbs.length === 0) {
+            showError('No verbs in Manual selection. Please add verbs in Manage Verbs.');
+            return;
+        }
+
+        // Shuffle and take requested number from manual verbs
+        const shuffled = manualVerbs.sort(() => 0.5 - Math.random());
+        const selectedVerbs = shuffled.slice(0, Math.min(numberOfVerbs, manualVerbs.length));
+
+        currentConfig = { numberOfVerbs, selectedCategories };
+        createTest(selectedVerbs);
+        return;
+    }
+
+    // If Manual is selected along with other categories
+    if (includeManual && regularCategories.length > 0) {
+        // Get IDs of manual verbs to exclude duplicates
+        const manualVerbIds = new Set(manualVerbs.map(v => v.id));
+
+        // Filter out verbs that are already in manual selection
+        const categoryVerbsWithoutDuplicates = availableVerbs.filter(v => !manualVerbIds.has(v.id));
+
+        // Calculate how many additional verbs we need from categories
+        const verbsNeededFromCategories = Math.max(0, numberOfVerbs - manualVerbs.length);
+
+        // Shuffle category verbs and take needed amount
+        const shuffledCategoryVerbs = categoryVerbsWithoutDuplicates.sort(() => 0.5 - Math.random());
+        const additionalVerbs = shuffledCategoryVerbs.slice(0, verbsNeededFromCategories);
+
+        // Combine manual verbs with additional category verbs
+        const combinedVerbs = [...manualVerbs, ...additionalVerbs];
+
+        if (combinedVerbs.length === 0) {
+            showError('No verbs found for the selected options.');
+            return;
+        }
+
+        // Shuffle the combined list
+        const finalVerbs = combinedVerbs.sort(() => 0.5 - Math.random());
+
+        currentConfig = { numberOfVerbs, selectedCategories };
+        createTest(finalVerbs);
+        return;
+    }
+
+    // Regular categories only (no Manual)
     if (availableVerbs.length === 0) {
         showError('No verbs found for the selected categories.');
         return;
@@ -107,6 +200,11 @@ function startTest() {
     const shuffled = availableVerbs.sort(() => 0.5 - Math.random());
     const selectedVerbs = shuffled.slice(0, numberOfVerbs);
 
+    createTest(selectedVerbs);
+}
+
+// Create test from selected verbs
+function createTest(selectedVerbs) {
     currentTest = {
         questions: selectedVerbs.map(v => ({
             verbId: v.id,

@@ -11,9 +11,15 @@ namespace GermanVerbTester.Data
         public DbSet<TestResult> TestResults { get; set; }
         public DbSet<Preposition> Prepositions { get; set; }
         public DbSet<PrepositionTestResult> PrepositionTestResults { get; set; }
+        public DbSet<VerbSelection> VerbSelections { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<VerbSelection>()
+                .HasOne(vs => vs.Verb)
+                .WithMany()
+                .HasForeignKey(vs => vs.VerbId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

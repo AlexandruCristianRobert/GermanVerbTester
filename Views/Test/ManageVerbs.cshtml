@@ -98,6 +98,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Section 3: Random Verb Selection -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Random Verb Selection</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="SelectRandomVerbs" method="post">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NumberOfVerbsToSelect" class="form-label">Number of Verbs to Select</label>
+                                <input asp-for="NumberOfVerbsToSelect" type="number" class="form-control" min="1" max="1000" value="100" />
+                                <span asp-validation-for="NumberOfVerbsToSelect" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Select Categories</label>
+                                <div class="form-check">
+                                    @foreach (var category in Model.AvailableCategories)
+                                    {
+                                        <div>
+                                            <input type="checkbox" name="SelectedCategoriesForRandom" value="@category" class="form-check-input" id="cat_@category" />
+                                            <label class="form-check-label" for="cat_@category">@category</label>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-info">Select Random Verbs</button>
+                            <a asp-action="ViewSelectedVerbs" class="btn btn-outline-info" target="_blank">View Selected Verbs</a>
+                        </div>
+                    </form>
+                    <form asp-action="ClearVerbSelections" method="post" class="mt-2">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to clear all verb selections?');">Clear All Selections</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
