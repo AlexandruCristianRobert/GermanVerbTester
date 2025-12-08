@@ -126,13 +126,20 @@ function startTest() {
     // Get verbs from regular categories
     let availableVerbs = [];
     if (regularCategories.length > 0) {
-        availableVerbs = verbsData.filter(v => regularCategories.includes(v.category));
+        availableVerbs = verbsData.filter(v => {
+            const verbCategory = v.category || v.Category;
+            return regularCategories.includes(verbCategory);
+        });
+
+        console.log(`Selected categories: ${regularCategories.join(', ')}`);
+        console.log(`Found ${availableVerbs.length} verbs matching categories`);
     }
 
     // Get verbs from Manual selection (VerbSelection table)
     let manualVerbs = [];
     if (includeManual && selectedVerbsData.length > 0) {
         manualVerbs = [...selectedVerbsData];
+        console.log(`Found ${manualVerbs.length} manual verbs`);
     }
 
     // If only Manual is selected
@@ -153,32 +160,30 @@ function startTest() {
 
     // If Manual is selected along with other categories
     if (includeManual && regularCategories.length > 0) {
-        // Get IDs of manual verbs to exclude duplicates
-        const manualVerbIds = new Set(manualVerbs.map(v => v.id));
+        // Combine all available verbs from both sources
+        const manualVerbIds = new Set(manualVerbs.map(v => v.id || v.Id));
 
-        // Filter out verbs that are already in manual selection
-        const categoryVerbsWithoutDuplicates = availableVerbs.filter(v => !manualVerbIds.has(v.id));
+        // Filter out duplicates from category verbs
+        const categoryVerbsWithoutDuplicates = availableVerbs.filter(v => !manualVerbIds.has(v.id || v.Id));
 
-        // Calculate how many additional verbs we need from categories
-        const verbsNeededFromCategories = Math.max(0, numberOfVerbs - manualVerbs.length);
+        // Combine all verbs
+        const allAvailableVerbs = [...manualVerbs, ...categoryVerbsWithoutDuplicates];
 
-        // Shuffle category verbs and take needed amount
-        const shuffledCategoryVerbs = categoryVerbsWithoutDuplicates.sort(() => 0.5 - Math.random());
-        const additionalVerbs = shuffledCategoryVerbs.slice(0, verbsNeededFromCategories);
+        console.log(`Total available verbs (manual + categories): ${allAvailableVerbs.length}`);
 
-        // Combine manual verbs with additional category verbs
-        const combinedVerbs = [...manualVerbs, ...additionalVerbs];
-
-        if (combinedVerbs.length === 0) {
+        if (allAvailableVerbs.length === 0) {
             showError('No verbs found for the selected options.');
             return;
         }
 
-        // Shuffle the combined list
-        const finalVerbs = combinedVerbs.sort(() => 0.5 - Math.random());
+        // Shuffle and take the requested number
+        const shuffled = allAvailableVerbs.sort(() => 0.5 - Math.random());
+        const selectedVerbs = shuffled.slice(0, Math.min(numberOfVerbs, allAvailableVerbs.length));
+
+        console.log(`Selected ${selectedVerbs.length} verbs for test`);
 
         currentConfig = { numberOfVerbs, selectedCategories };
-        createTest(finalVerbs);
+        createTest(selectedVerbs);
         return;
     }
 
@@ -205,12 +210,14 @@ function startTest() {
 
 // Create test from selected verbs
 function createTest(selectedVerbs) {
+    console.log(`Creating test with ${selectedVerbs.length} verbs`);
+
     currentTest = {
         questions: selectedVerbs.map(v => ({
-            verbId: v.id,
-            german: v.german,
-            english: v.english,
-            hint: v.hint,
+            verbId: v.id || v.Id,
+            german: v.german || v.German,
+            english: v.english || v.English,
+            hint: v.hint || v.Hint,
             userAnswer: '',
             isCorrect: false
         })),
